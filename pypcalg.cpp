@@ -1,3 +1,14 @@
+/**
+	Author: Luca Masera.
+    Edited from the PC++ project https://bitbucket.org/francesco-asnicar/gene_network_expansion.
+	Copyright (C) 2017, all rights reserved
+
+	This file (pypcalg.cpp) is part of the PC++ project.
+
+	PyPCalg is distributed WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+**/
+
 #include <boost/version.hpp>
 #include <boost/python.hpp>
 #include <boost/python/module.hpp>
