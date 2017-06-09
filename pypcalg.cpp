@@ -137,7 +137,7 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
   for(int i = 0; i < n_rows; i++){
     p::list row;
     for (int j = 0; j < n_rows; ++j){
-      row.append(g->matrix[i][j]);
+      row.append((uint) g->matrix[i][j]);
     }
     adj.append(row);
   }
