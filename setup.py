@@ -16,6 +16,12 @@ from distutils.extension import Extension
 
 setup(
     name="pypcalg",
+    version='0.1',
+    description='Python wrap for the skeleton function of the PC-algorithm implemented in the PC++ project',
+    url='https://github.com/lucamasera/pyPCalg',
+    author='Luca Masera',
+    author_email='luca.masera@unitn.it',
+    license='BOOST v1.0',
     ext_modules=[
         Extension(
             "pypcalg", 

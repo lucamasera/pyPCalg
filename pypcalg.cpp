@@ -168,7 +168,21 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
 
 BOOST_PYTHON_MODULE(pypcalg)
 {
-    p::def("skeleton", skeleton_wrapper);
+    p::def(
+      "skeleton",
+      skeleton_wrapper,
+      p::args("expression_data", "alpha", "return_sepset"),
+      "Python wrapper of the PC++ skeleton function.\n\n"
+      "Args:\n"
+      "   expression_data (list): n*m list of lists, where n is the number of \n"
+      "                           variables (e.g. genes) and m is the number \n"
+      "                           of measurments (e.g contrasts).\n"
+      "   alpha (float)         : The value of the alpha parameter.\n"
+      "   return_sepset   (bool): Specifies whether to compute and return the\n"
+      "                            separation sets or not.\n\n"
+      "Returns:\n"
+      "   tuple: (adjacency matrix (list), sepsets (list)).\n"
+    );
 }
 
 /**
