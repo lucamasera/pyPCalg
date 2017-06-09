@@ -3,8 +3,8 @@
 ## Requirements
 
 This package has been tested with:
-*Python 2.7.11
-*Boost libraries
+* Python 2.7.11
+* Boost libraries 1.58
 
 ## Installation
 
