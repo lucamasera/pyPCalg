@@ -96,16 +96,12 @@ void iterativeComb(int*, const int, const int, Graph* &, const int, const int, c
 void findAllSubsets(Graph* &, const int, const int, const int, const double, int*, double**, int*, const bool, const bool);
 
 //
-void skeleton(Graph* &, const double, const bool, const bool);
+void skeleton(Graph* &, const double, const bool, const bool, const bool);
 
-/**int main(int argc, char **argv)
-{
-  Py_Initialize();
-}**/
 
-p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, const bool return_sepset){
-  int n_rows = boost::python::len(expression_data);
-  int n_cols = boost::python::len(p::extract<p::list>((expression_data)[0]));
+p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, const bool return_sepset, const bool verbose){
+  int n_rows = p::len(expression_data);
+  int n_cols = p::len(p::extract<p::list>((expression_data)[0]));
 
   Graph* g = new Graph(n_rows, n_cols, return_sepset);
 
@@ -129,7 +125,7 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
   //compute the correlations coefficients
   g->computeCorrelations();
 
-  skeleton(g, alpha, false, return_sepset);
+  skeleton(g, alpha, false, return_sepset, verbose);
 
   p::tuple retval;
 
@@ -171,7 +167,7 @@ BOOST_PYTHON_MODULE(pypcalg)
     p::def(
       "skeleton",
       skeleton_wrapper,
-      p::args("expression_data", "alpha", "return_sepset"),
+      p::args("expression_data", "alpha", "return_sepset", "verbose"),
       "Python wrapper of the PC++ skeleton function.\n\n"
       "Args:\n"
       "   expression_data (list): n*m list of lists, where n is the number of \n"
@@ -179,7 +175,8 @@ BOOST_PYTHON_MODULE(pypcalg)
       "                           of measurments (e.g contrasts).\n"
       "   alpha (float)         : The value of the alpha parameter.\n"
       "   return_sepset   (bool): Specifies whether to compute and return the\n"
-      "                            separation sets or not.\n\n"
+      "                           separation sets or not.\n"
+      "   verbose         (bool): extends output\n\n"
       "Returns:\n"
       "   tuple: (adjacency matrix (list), sepsets (list)).\n"
     );
@@ -608,7 +605,7 @@ void findAllSubsets(Graph* &g, const int i, const int j, const int l, const doub
 /**
  *
  */
-void skeleton(Graph* &g, const double alpha, const bool star, const bool directed) {
+void skeleton(Graph* &g, const double alpha, const bool star, const bool directed, const bool verbose) {
   int l = -1;
   bool hasWorked = true; //boolean to see that there is at least an arc i,j s.t. |ad j(C, i)\{j}| >= l TO CHECK FROM THE TEXT
   int* neighbours = new int[g->nRows]; //alloc the neighbours array (save time)
@@ -624,7 +621,12 @@ void skeleton(Graph* &g, const double alpha, const bool star, const bool directe
     l++;
     hasWorked = false;
 
+    if (verbose) cerr << "\nl: " << l << " "; 
+
     for (int i = 0; i < g->nRows; i++) {
+
+      if (verbose) cerr << "-";
+
       for (int j = 0; j < g->nRows; j++) {
         //check if exists the arc between i and j
         if (g->matrix[i][j] && (g->numNeighbours[i] > l)) {
