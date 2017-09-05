@@ -162,12 +162,95 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
   return retval;
 }
 
+
+p::tuple skeleton_from_kernel_wrapper(const p::list& kernel, const float alpha, const int n_experiments, const bool return_sepset, const bool verbose){
+  int n_rows = p::len(kernel);
+  int n_cols = n_experiments;
+
+  Graph* g = new Graph(n_rows, n_cols, return_sepset);
+
+  g->bioData = new double*[n_rows];
+
+  for (int i = 0; i < g->nRows; i++) {
+    g->bioData[i] = new double[1];
+  }
+
+  // cout << g->rho[0][0] << endl;
+
+  for(int i = 0; i < n_rows; i++){
+    p::list row = p::extract<p::list>((kernel)[i]);
+    for (int j = 0; j < n_cols; ++j){
+      float x = p::extract<float>( (row)[j] );
+      g->rho[i][j] = x;
+    }
+  }
+
+  // cout << g->rho[0][0] << endl;
+
+  skeleton(g, alpha, false, return_sepset, verbose);
+
+  // cout << "fatto skeleton"<< endl;
+
+  p::tuple retval;
+
+  p::list adj;
+  for(int i = 0; i < n_rows; i++){
+    p::list row;
+    for (int j = 0; j < n_rows; ++j){
+      row.append((uint) g->matrix[i][j]);
+    }
+    adj.append(row);
+  }
+
+  // cout << return_sepset << endl;
+  
+  if (return_sepset) {
+    p::list sepsets;
+    for(int i = 1; i < n_rows; i++){
+      p::list row;
+      for (int j = 0; j < i; ++j){
+        p::list sepset;
+        for (int k = 0; k < g->lenSepSet[j][i]; k++){
+          sepset.append(g->sepSet[j][i][k]);
+        }
+        row.append(sepset);
+      }
+      sepsets.append(row);
+    }
+
+    retval = p::make_tuple(adj, sepsets);
+  } else {
+    retval = p::make_tuple(adj, p::object());
+  }
+
+  delete g;
+
+  return retval;
+}
+
 BOOST_PYTHON_MODULE(pypcalg)
 {
     p::def(
       "skeleton",
       skeleton_wrapper,
       p::args("expression_data", "alpha", "return_sepset", "verbose"),
+      "Python wrapper of the PC++ skeleton function.\n\n"
+      "Args:\n"
+      "   expression_data (list): n*m list of lists, where n is the number of \n"
+      "                           variables (e.g. genes) and m is the number \n"
+      "                           of measurments (e.g contrasts).\n"
+      "   alpha (float)         : The value of the alpha parameter.\n"
+      "   return_sepset   (bool): Specifies whether to compute and return the\n"
+      "                           separation sets or not.\n"
+      "   verbose         (bool): extends output\n\n"
+      "Returns:\n"
+      "   tuple: (adjacency matrix (list), sepsets (list)).\n"
+    );
+
+    p::def(
+      "skeleton_from_kernel",
+      skeleton_from_kernel_wrapper,
+      p::args("kernel", "alpha", "n_experiments", "return_sepset", "verbose"),
       "Python wrapper of the PC++ skeleton function.\n\n"
       "Args:\n"
       "   expression_data (list): n*m list of lists, where n is the number of \n"
