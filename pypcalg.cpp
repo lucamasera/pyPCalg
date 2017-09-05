@@ -99,7 +99,7 @@ void findAllSubsets(Graph* &, const int, const int, const int, const double, int
 void skeleton(Graph* &, const double, const bool, const bool, const bool);
 
 
-p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, const bool return_sepset, const bool verbose){
+p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, const bool return_sepset, const bool star,  const bool verbose){
   int n_rows = p::len(expression_data);
   int n_cols = p::len(p::extract<p::list>((expression_data)[0]));
 
@@ -163,12 +163,13 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
 }
 
 
-p::tuple skeleton_from_kernel_wrapper(const p::list& kernel, const float alpha, const int n_experiments, const bool return_sepset, const bool verbose){
+p::tuple skeleton_from_kernel_wrapper(const p::list& kernel, const float alpha, const int n_experiments, const bool return_sepset, const bool star, const bool verbose){
   int n_rows = p::len(kernel);
   int n_cols = n_experiments;
 
   Graph* g = new Graph(n_rows, n_cols, return_sepset);
 
+  //cosa brutta ma serve per funzionare (delete da errore altrimenti)
   g->bioData = new double*[n_rows];
 
   for (int i = 0; i < g->nRows; i++) {
@@ -179,15 +180,14 @@ p::tuple skeleton_from_kernel_wrapper(const p::list& kernel, const float alpha, 
 
   for(int i = 0; i < n_rows; i++){
     p::list row = p::extract<p::list>((kernel)[i]);
-    for (int j = 0; j < n_cols; ++j){
-      float x = p::extract<float>( (row)[j] );
-      g->rho[i][j] = x;
+    for (int j = 0; j < p::len(row); ++j){
+      g->rho[i][j] =  p::extract<double>( (row)[j] );
     }
   }
 
   // cout << g->rho[0][0] << endl;
 
-  skeleton(g, alpha, false, return_sepset, verbose);
+  skeleton(g, alpha, star, return_sepset, verbose);
 
   // cout << "fatto skeleton"<< endl;
 
@@ -233,7 +233,7 @@ BOOST_PYTHON_MODULE(pypcalg)
     p::def(
       "skeleton",
       skeleton_wrapper,
-      p::args("expression_data", "alpha", "return_sepset", "verbose"),
+      p::args("expression_data", "alpha", "return_sepset", "star", "verbose"),
       "Python wrapper of the PC++ skeleton function.\n\n"
       "Args:\n"
       "   expression_data (list): n*m list of lists, where n is the number of \n"
@@ -250,7 +250,7 @@ BOOST_PYTHON_MODULE(pypcalg)
     p::def(
       "skeleton_from_kernel",
       skeleton_from_kernel_wrapper,
-      p::args("kernel", "alpha", "n_experiments", "return_sepset", "verbose"),
+      p::args("kernel", "alpha", "n_experiments", "return_sepset", "star", "verbose"),
       "Python wrapper of the PC++ skeleton function.\n\n"
       "Args:\n"
       "   expression_data (list): n*m list of lists, where n is the number of \n"
