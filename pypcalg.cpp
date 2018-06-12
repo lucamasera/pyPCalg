@@ -29,10 +29,11 @@ typedef std::pair<int,int> intpair;
 
 class Graph {
 public:
-    Graph(const int, const int, const bool); //constructor : initialize the matrix and the numNeighbours
+    Graph(const int, const int, const bool); //constructor : initialize the adj_matrix and the numNeighbours
     ~Graph(void); //destructor : free the allocated memory
-    bool** matrix; //matrix that represent the graph
-    bool** cutMap; //matrix that represent the graph
+    bool** adj_matrix; //adj_matrix that represent the graph
+    double** pval_matrix;
+    bool** cutMap; //adj_matrix that represent the graph
     bool** double_directed; //keep track of double directed arcs
     int nRows; //represent the number of rows of matrix (and columns), bioData, means, standardDeviations and numNeighbours
     int nCols; //represent the number of columns of bioData
@@ -46,10 +47,11 @@ public:
     int** lenSepSet; // contains the lenght of the separation set for each pairs of nodes
     void computeStandardDeviations(void); //compute the standard deviation for each node in the graph
     void computeCorrelations(void); //compute the correlation coefficient of the base case, and store it in rho
-    void initializeCutMap(); //initialize the boolean matrix to 'true', but the diagonal, setted to 'false'
+    void initializeCutMap(); //initialize the boolean adj_matrix to 'true', but the diagonal, setted to 'false'
 
 private:
-    void initializeMatrix(bool**, const int); //initialize the boolean matrix to 'true', but the diagonal, setted to 'false'
+    void initializeMatrix(bool**, const int); //initialize the boolean adj_matrix to 'true', but the diagonal, setted to 'false'
+    void initializePvalMatrix(double**, const int);
     void initializeNeighbours(int*, const int); //initialize the array numNeighbours with the value dim-1, since the initial graph is connected
     void initializeZero(double*, const int); //initialize the given array till dim to 0.0
     void initializeMatrixZero(int**, const int); //initialize the int matrix to 0
@@ -125,7 +127,7 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
   //compute the correlations coefficients
   g->computeCorrelations();
 
-  skeleton(g, alpha, false, return_sepset, verbose);
+  skeleton(g, alpha, star, return_sepset, false);
 
   p::tuple retval;
 
@@ -133,9 +135,18 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
   for(int i = 0; i < n_rows; i++){
     p::list row;
     for (int j = 0; j < n_rows; ++j){
-      row.append((uint) g->matrix[i][j]);
+      row.append((uint) g->adj_matrix[i][j]);
     }
     adj.append(row);
+  }
+  
+  p::list pvals;
+  for(int i = 0; i < n_rows; i++){
+    p::list row;
+    for (int j = 0; j < n_rows; ++j){
+      row.append((uint) g->pval_matrix[i][j]);
+    }
+    pvals.append(row);
   }
   
   if (return_sepset) {
@@ -152,9 +163,9 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
       sepsets.append(row);
     }
 
-    retval = p::make_tuple(adj, sepsets);
+    retval = p::make_tuple(adj, pvals, sepsets);
   } else {
-    retval = p::make_tuple(adj, p::object());
+    retval = p::make_tuple(adj, pvals, p::object());
   }
 
   delete g;
@@ -197,9 +208,18 @@ p::tuple skeleton_from_kernel_wrapper(const p::list& kernel, const float alpha, 
   for(int i = 0; i < n_rows; i++){
     p::list row;
     for (int j = 0; j < n_rows; ++j){
-      row.append((uint) g->matrix[i][j]);
+      row.append((uint) g->adj_matrix[i][j]);
     }
     adj.append(row);
+  }
+  
+  p::list pvals;
+  for(int i = 0; i < n_rows; i++){
+    p::list row;
+    for (int j = 0; j < n_rows; ++j){
+      row.append((uint) g->pval_matrix[i][j]);
+    }
+    pvals.append(row);
   }
 
   // cout << return_sepset << endl;
@@ -218,9 +238,9 @@ p::tuple skeleton_from_kernel_wrapper(const p::list& kernel, const float alpha, 
       sepsets.append(row);
     }
 
-    retval = p::make_tuple(adj, sepsets);
+    retval = p::make_tuple(adj, pvals, sepsets);
   } else {
-    retval = p::make_tuple(adj, p::object());
+    retval = p::make_tuple(adj, pvals, p::object());
   }
 
   delete g;
@@ -275,14 +295,17 @@ Graph::Graph(const int n_rows, const int n_cols, const bool direct) {
   numNeighbours = new int[nRows];
 
   //create the bool matrix
-  matrix = new bool*[nRows];
-
+  adj_matrix = new bool*[nRows];
   for (int i = 0; i < nRows; i++) {
-    matrix[i] = new bool[nRows];
+    adj_matrix[i] = new bool[nRows];
+  }
+  
+  pval_matrix = new double*[nRows];
+  for (int i = 0; i < nRows; i++) {
+    pval_matrix[i] = new double[nRows];
   }
 
   cutMap = new bool*[nRows];
-
   for (int i = 0; i < nRows; i++) {
     cutMap[i] = new bool[nRows];
   }
@@ -306,7 +329,7 @@ Graph::Graph(const int n_rows, const int n_cols, const bool direct) {
       sepSet[i] = new int*[nRows];
     }
 
-    // create the lenSepSet matrix
+    // create the lenSepSet adj_matrix
     lenSepSet = new int*[nRows];
 
     for (int i = 0; i < nRows; i++) {
@@ -317,8 +340,9 @@ Graph::Graph(const int n_rows, const int n_cols, const bool direct) {
     initializeMatrixZero(lenSepSet, nRows);
   }
 
-  //initialize matrix, numNeighbours and l
-  initializeMatrix(matrix, nRows);
+  //initialize adj_matrix, numNeighbours and l
+  initializeMatrix(adj_matrix, nRows);
+  initializePvalMatrix(pval_matrix, nRows);
   initializeCutMap();
   initializeNeighbours(numNeighbours, nRows);
   initializeZero(means, nRows);
@@ -330,11 +354,16 @@ Graph::Graph(const int n_rows, const int n_cols, const bool direct) {
  *
  */
 Graph::~Graph(void) {
-  //empty the memory for matrix
+  //empty the memory for adj_matrix
   for (int i = 0; i < nRows; i++) {
-    delete[] matrix[i];
+    delete[] adj_matrix[i];
   }
-  delete[] matrix;
+  delete[] adj_matrix;
+  
+  for (int i = 0; i < nRows; i++) {
+    delete[] pval_matrix[i];
+  }
+  delete[] pval_matrix;
 
   //empty the memory for cutMap
   for (int i = 0; i < nRows; i++) {
@@ -406,7 +435,7 @@ void Graph::computeCorrelations(void) {
 }
 
 /**
- *  Initialize the boolean matrix to 'true', but the diagonal, setted to 'false'
+ *  Initialize the boolean adj_matrix to 'true', but the diagonal, setted to 'false'
  */
 void Graph::initializeMatrix(bool** matrix, const int dim) {
   for (int i = 0; i < dim; i++) {
@@ -421,7 +450,18 @@ void Graph::initializeMatrix(bool** matrix, const int dim) {
 }
 
 /**
- *  Initialize the boolean matrix to 'true', but the diagonal, setted to 'false'
+ *  Initialize the double pval_matrix to '1'
+ */
+void Graph::initializePvalMatrix(double** matrix, const int dim) {
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+        matrix[i][j] = 0;
+    }
+  }
+}
+
+/**
+ *  Initialize the boolean adj_matrix to 'true', but the diagonal, setted to 'false'
  */
 void Graph::initializeCutMap() {
   for (int i = 0; i < Graph::nRows; i++) {
@@ -495,6 +535,10 @@ void testAndRemove(const int* neighbours, const int* subset, double correlationC
   if (isnan(pVal)) {
     pVal = NAdelete ? 1.0 : 0.0;
   }
+  
+  if (pVal > g->adj_matrix[r][c]) {
+    g->adj_matrix[r][c] = g->adj_matrix[c][r] = pVal;
+  }
 
   //test d-separation
   if (pVal >= alpha) {
@@ -521,7 +565,7 @@ void testAndRemove(const int* neighbours, const int* subset, double correlationC
       g->cutMap[r][c] = g->cutMap[c][r] = true;
     } else {
       //remove edges
-      g->matrix[r][c] = g->matrix[c][r] = false;
+      g->adj_matrix[r][c] = g->adj_matrix[c][r] = false;
 
       //decrement neighbours
       g->numNeighbours[r]--;
@@ -542,7 +586,7 @@ void remove(Graph* &g) {
             if (g->cutMap[r][c]) {
                 g->numNeighbours[r]--;
                 g->numNeighbours[c]--;
-                g->matrix[r][c] = g->matrix[c][r] = false;
+                g->adj_matrix[r][c] = g->adj_matrix[c][r] = false;
             }
         }
     }
@@ -622,7 +666,7 @@ void iterativeComb(int* neighbours, const int neighboursDim, const int l, Graph*
 
     coeff = getCorrelationCoefficient(neighbours, currentCombination, l, g, r, c, p);
     testAndRemove(neighbours, currentCombination, coeff, g, r, c, l, alpha, star, directed);
-  } while (!g->cutMap[r][c] && g->matrix[r][c] && !((currentCombination[0] == (neighboursDim - l)) && (currentCombination[l - 1] == (neighboursDim - 1))));
+  } while (!g->cutMap[r][c] && g->adj_matrix[r][c] && !((currentCombination[0] == (neighboursDim - l)) && (currentCombination[l - 1] == (neighboursDim - 1))));
 }
 
 /** Finds all the subsets adj(i)\{j} with cardinality equals to l (formally, |adj(i)\{j}| = l).
@@ -662,8 +706,8 @@ void findAllSubsets(Graph* &g, const int i, const int j, const int l, const doub
     testAndRemove(NULL, NULL, g->rho[i][j], g, i, j, l, alpha, star, directed);
   } else if (l == 1) {
     //find neighbours (when l > 0) of i without considering j
-    for (int k = 0; (g->matrix[i][j]) && !(g->cutMap[i][j]) && (k < g->nRows) && (neighboursDim < g->numNeighbours[i]); k++) {
-      if (g->matrix[i][k] && (k != j)) {
+    for (int k = 0; (g->adj_matrix[i][j]) && !(g->cutMap[i][j]) && (k < g->nRows) && (neighboursDim < g->numNeighbours[i]); k++) {
+      if (g->adj_matrix[i][k] && (k != j)) {
         neighboursDim++;
         double correlationCoefficient = (g->rho[i][j] - (g->rho[i][k] * g->rho[j][k])) / sqrt((1 - pow(g->rho[i][k], 2)) * (1 - pow(g->rho[j][k], 2)));
         int pos[1];
@@ -675,7 +719,7 @@ void findAllSubsets(Graph* &g, const int i, const int j, const int l, const doub
   } else {
     //find neighbours (when l > 1) of i without considering j
     for (int k = 0; (k < g->nRows) && (neighboursDim < g->numNeighbours[i]); k++) {
-      if ((g->matrix[i][k]) && (k != j)) {
+      if ((g->adj_matrix[i][k]) && (k != j)) {
         neighbours[neighboursDim++] = k;
       }
     }
@@ -712,7 +756,7 @@ void skeleton(Graph* &g, const double alpha, const bool star, const bool directe
 
       for (int j = 0; j < g->nRows; j++) {
         //check if exists the arc between i and j
-        if (g->matrix[i][j] && (g->numNeighbours[i] > l)) {
+        if (g->adj_matrix[i][j] && (g->numNeighbours[i] > l)) {
           hasWorked = true;
           findAllSubsets(g, i, j, l, alpha, neighbours, p, currentCombination, star, directed);
         }
@@ -845,19 +889,19 @@ bool isFloat(const char* number) {
 
 /** Counts the number of (uncutted) edges in the graph.
 
-  @param bool** matrix
+  @param bool** adj_matrix
   Matrix of booleans representing a tabular form of the presence and absence of all the edges in the graph.
   The boolean located in the cell of i-th row and j-th column represents the presence/absence of the edge i->j.
 
   @param const int rows
-  The number of rows in the matrix.
+  The number of rows in the adj_matrix.
 
   @param const int cols
-  The number of rows in the matrix.
+  The number of rows in the adj_matrix.
 
   @return The number of uncutted edges.
 */
-int countArcs(bool** matrix, const int rows, const int cols, const int mode) {
+int countArcs(bool** adj_matrix, const int rows, const int cols, const int mode) {
   int counter = -1;
 
   if (mode == 0) {
@@ -865,7 +909,7 @@ int countArcs(bool** matrix, const int rows, const int cols, const int mode) {
 
     for (int i = 0; i < rows; i++) {
       for (int j = i + 1; j < cols; j++) {
-        if (matrix[i][j]) {
+        if (adj_matrix[i][j]) {
           counter++;
         }
       }
@@ -875,7 +919,7 @@ int countArcs(bool** matrix, const int rows, const int cols, const int mode) {
     
     for (int i = 0; i < rows; i++) {
       for (int j = 0; j < cols; j++) {
-        if (matrix[i][j]) {
+        if (adj_matrix[i][j]) {
           counter++;
         }
       }

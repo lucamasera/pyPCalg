@@ -16,7 +16,7 @@ from distutils.extension import Extension
 
 setup(
     name="pypcalg",
-    version='0.1.3',
+    version='0.1.4',
     description='Python wrap for the skeleton function of the PC-algorithm implemented in the PC++ project',
     url='https://github.com/lucamasera/pyPCalg',
     author='Luca Masera',
