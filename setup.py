@@ -14,9 +14,11 @@ http://www.boost.org/LICENSE_1_0.txt)
 from distutils.core import setup
 from distutils.extension import Extension
 
+__version__ = '0.1.5'
+
 setup(
     name="pypcalg",
-    version='0.1.4.1',
+    version=__version__,
     description='Python wrap for the skeleton function of the PC-algorithm implemented in the PC++ project',
     url='https://github.com/lucamasera/pyPCalg',
     author='Luca Masera',

@@ -102,6 +102,7 @@ void skeleton(Graph* &, const double, const bool, const bool, const bool);
 
 
 p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, const bool return_sepset, const bool star,  const bool verbose){
+  cout << 1.1 << endl;
   int n_rows = p::len(expression_data);
   int n_cols = p::len(p::extract<p::list>((expression_data)[0]));
 
@@ -127,7 +128,12 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
   //compute the correlations coefficients
   g->computeCorrelations();
 
-  skeleton(g, alpha, star, return_sepset, false);
+  skeleton(g, alpha, star, return_sepset, verbose);
+  
+  
+  cout << "fatto skeleton"<< endl;
+  
+  cout << g->pval_matrix[0][1]<< endl;
 
   p::tuple retval;
 
@@ -144,7 +150,7 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
   for(int i = 0; i < n_rows; i++){
     p::list row;
     for (int j = 0; j < n_rows; ++j){
-      row.append((uint) g->pval_matrix[i][j]);
+      row.append((double) g->pval_matrix[i][j]);
     }
     pvals.append(row);
   }
@@ -200,8 +206,6 @@ p::tuple skeleton_from_kernel_wrapper(const p::list& kernel, const float alpha, 
 
   skeleton(g, alpha, star, return_sepset, verbose);
 
-  // cout << "fatto skeleton"<< endl;
-
   p::tuple retval;
 
   p::list adj;
@@ -217,7 +221,7 @@ p::tuple skeleton_from_kernel_wrapper(const p::list& kernel, const float alpha, 
   for(int i = 0; i < n_rows; i++){
     p::list row;
     for (int j = 0; j < n_rows; ++j){
-      row.append((uint) g->pval_matrix[i][j]);
+      row.append((double) g->pval_matrix[i][j]);
     }
     pvals.append(row);
   }
@@ -455,7 +459,7 @@ void Graph::initializeMatrix(bool** matrix, const int dim) {
 void Graph::initializePvalMatrix(double** matrix, const int dim) {
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-        matrix[i][j] = 0;
+        matrix[i][j] = 0.0;
     }
   }
 }
@@ -535,6 +539,8 @@ void testAndRemove(const int* neighbours, const int* subset, double correlationC
   if (isnan(pVal)) {
     pVal = NAdelete ? 1.0 : 0.0;
   }
+  
+  cout << pVal <<"\t"<< g->pval_matrix[r][c] << endl;
   
   if (pVal > g->pval_matrix[r][c]) {
     g->pval_matrix[r][c] = g->pval_matrix[c][r] = pVal;
@@ -759,14 +765,15 @@ void skeleton(Graph* &g, const double alpha, const bool star, const bool directe
         if (g->adj_matrix[i][j] && (g->numNeighbours[i] > l)) {
           hasWorked = true;
           findAllSubsets(g, i, j, l, alpha, neighbours, p, currentCombination, star, directed);
+          cout << g->pval_matrix[0][1] << endl;
         }
       }
     }
 
     if (star) {
-            remove(g);
-            g->initializeCutMap();
-        }
+      remove(g);
+      g->initializeCutMap();
+    }
   }
 
   // free the memory    
