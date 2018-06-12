@@ -536,8 +536,8 @@ void testAndRemove(const int* neighbours, const int* subset, double correlationC
     pVal = NAdelete ? 1.0 : 0.0;
   }
   
-  if (pVal > g->adj_matrix[r][c]) {
-    g->adj_matrix[r][c] = g->adj_matrix[c][r] = pVal;
+  if (pVal > g->pval_matrix[r][c]) {
+    g->pval_matrix[r][c] = g->pval_matrix[c][r] = pVal;
   }
 
   //test d-separation
