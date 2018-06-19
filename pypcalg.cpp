@@ -102,7 +102,6 @@ void skeleton(Graph* &, const double, const bool, const bool, const bool);
 
 
 p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, const bool return_sepset, const bool star,  const bool verbose){
-  cout << 1.1 << endl;
   int n_rows = p::len(expression_data);
   int n_cols = p::len(p::extract<p::list>((expression_data)[0]));
 
@@ -129,11 +128,6 @@ p::tuple skeleton_wrapper(const p::list& expression_data, const float alpha, con
   g->computeCorrelations();
 
   skeleton(g, alpha, star, return_sepset, verbose);
-  
-  
-  cout << "fatto skeleton"<< endl;
-  
-  cout << g->pval_matrix[0][1]<< endl;
 
   p::tuple retval;
 
@@ -540,8 +534,6 @@ void testAndRemove(const int* neighbours, const int* subset, double correlationC
     pVal = NAdelete ? 1.0 : 0.0;
   }
   
-  cout << pVal <<"\t"<< g->pval_matrix[r][c] << endl;
-  
   if (pVal > g->pval_matrix[r][c]) {
     g->pval_matrix[r][c] = g->pval_matrix[c][r] = pVal;
   }
@@ -765,7 +757,6 @@ void skeleton(Graph* &g, const double alpha, const bool star, const bool directe
         if (g->adj_matrix[i][j] && (g->numNeighbours[i] > l)) {
           hasWorked = true;
           findAllSubsets(g, i, j, l, alpha, neighbours, p, currentCombination, star, directed);
-          cout << g->pval_matrix[0][1] << endl;
         }
       }
     }
